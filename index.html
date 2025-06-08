@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Interactiva</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f6fa;
+            color: #2f3640;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 15px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #273c75;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .date-display {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .date-picker {
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+        }
+        
+        .input-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .time-input, .task-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            flex-grow: 1;
+            min-width: 120px;
+        }
+        
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .status-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            flex-grow: 1;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .status-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status-btn:active {
+            transform: translateY(0);
+        }
+        
+        .pending {
+            background-color: #ff6b6b;
+        }
+        
+        .in-progress {
+            background-color: #feca57;
+            color: #2f3640;
+        }
+        
+        .completed {
+            background-color: #1dd1a1;
+        }
+        
+        .add-btn {
+            background-color: #273c75;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        .add-btn:hover {
+            background-color: #192a56;
+        }
+        
+        .tasks-container {
+            margin-top: 20px;
+        }
+        
+        .task-item {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .task-info {
+            flex-grow: 1;
+        }
+        
+        .task-time {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #7f8c8d;
+        }
+        
+        .task-text {
+            margin-top: 5px;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        
+        .no-tasks {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        @media (min-width: 600px) {
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            
+            .input-section {
+                flex-wrap: nowrap;
+            }
+            
+            .status-buttons {
+                width: auto;
+                margin-top: 0;
+            }
+            
+            .add-btn {
+                width: auto;
+                margin-top: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="date-display" id="current-date"></div>
+            <input type="date" class="date-picker" id="date-picker">
+        </div>
+        
+        <div class="input-section">
+            <input type="time" class="time-input" id="time-input">
+            <input type="text" class="task-input" id="task-input" placeholder="Descripción de la tarea">
+            
+            <div class="status-buttons">
+                <button class="status-btn pending" data-status="pending">Pendiente</button>
+                <button class="status-btn in-progress" data-status="in-progress">En ejecución</button>
+                <button class="status-btn completed" data-status="completed">Completado</button>
+            </div>
+            
+            <button class="add-btn" id="add-btn">Agregar Tarea</button>
+        </div>
+        
+        <div class="tasks-container" id="tasks-container">
+            <div class="no-tasks">No hay tareas para esta fecha</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos del DOM
+            const currentDateElement = document.getElementById('current-date');
+            const datePickerElement = document.getElementById('date-picker');
+            const timeInputElement = document.getElementById('time-input');
+            const taskInputElement = document.getElementById('task-input');
+            const addButtonElement = document.getElementById('add-btn');
+            const tasksContainerElement = document.getElementById('tasks-container');
+            const statusButtons = document.querySelectorAll('.status-btn');
+            
+            // Variables de estado
+            let selectedDate = new Date();
+            let selectedStatus = 'pending';
+            
+            // Inicialización
+            updateDateDisplay();
+            setupEventListeners();
+            loadTasksForDate(selectedDate);
+            
+            function updateDateDisplay() {
+                const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                currentDateElement.textContent = selectedDate.toLocaleDateString('es-ES', options);
+                
+                // Formatear fecha para el input date (YYYY-MM-DD)
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                datePickerElement.value = `${year}-${month}-${day}`;
+            }
+            
+            function setupEventListeners() {
+                // Selector de fecha
+                datePickerElement.addEventListener('change', function() {
+                    selectedDate = new Date(this.value);
+                    updateDateDisplay();
+                    loadTasksForDate(selectedDate);
+                });
+                
+                // Botones de estado
+                statusButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        selectedStatus = this.dataset.status;
+                        
+                        // Resaltar el botón seleccionado
+                        statusButtons.forEach(btn => {
+                            btn.style.opacity = '0.7';
+                            btn.style.transform = 'scale(0.95)';
+                        });
+                        
+                        this.style.opacity = '1';
+                        this.style.transform = 'scale(1)';
+                    });
+                });
+                
+                // Establecer estado inicial (Pendiente)
+                document.querySelector('.status-btn[data-status="pending"]').click();
+                
+                // Botón agregar tarea
+                addButtonElement.addEventListener('click', addTask);
+                
+                // Permitir agregar con Enter
+                taskInputElement.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addTask();
+                    }
+                });
+            }
+            
+            function addTask() {
+                const time = timeInputElement.value;
+                const text = taskInputElement.value.trim();
+                
+                if (!time || !text) {
+                    alert('Por favor ingresa una hora y una descripción para la tarea');
+                    return;
+                }
+                
+                const task = {
+                    id: Date.now(),
+                    date: selectedDate.toISOString().split('T')[0], // Formato YYYY-MM-DD
+                    time: time,
+                    text: text,
+                    status: selectedStatus
+                };
+                
+                saveTask(task);
+                renderTask(task);
+                
+                // Limpiar inputs
+                timeInputElement.value = '';
+                taskInputElement.value = '';
+            }
+            
+            function saveTask(task) {
+                let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                tasks.push(task);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+            
+            function loadTasksForDate(date) {
+                const dateStr = date.toISOString().split('T')[0];
+                let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                
+                // Filtrar tareas por fecha seleccionada
+                const filteredTasks = tasks.filter(task => task.date === dateStr);
+                
+                // Ordenar por hora
+                filteredTasks.sort((a, b) => a.time.localeCompare(b.time));
+                
+                renderTasks(filteredTasks);
+            }
+            
+            function renderTasks(tasks) {
+                tasksContainerElement.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    tasksContainerElement.innerHTML = '<div class="no-tasks">No hay tareas para esta fecha</div>';
+                    return;
+                }
+                
+                tasks.forEach(task => renderTask(task));
+            }
+            
+            function renderTask(task) {
+                const noTasksElement = tasksContainerElement.querySelector('.no-tasks');
+                if (noTasksElement) {
+                    noTasksElement.remove();
+                }
+                
+                const taskElement = document.createElement('div');
+                taskElement.className = 'task-item';
+                taskElement.dataset.id = task.id;
+                
+                // Aplicar color según estado
+                switch(task.status) {
+                    case 'pending':
+                        taskElement.style.borderLeft = '5px solid #ff6b6b';
+                        break;
+                    case 'in-progress':
+                        taskElement.style.borderLeft = '5px solid #feca57';
+                        break;
+                    case 'completed':
+                        taskElement.style.borderLeft = '5px solid #1dd1a1';
+                        break;
+                }
+                
+                taskElement.innerHTML = `
+                    <div class="task-info">
+                        <div>
+                            <span class="task-time">${task.time}</span>
+                        </div>
+                        <div class="task-text">${task.text}</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="delete-btn">Eliminar</button>
+                    </div>
+                `;
+                
+                // Agregar evento para eliminar tarea
+                const deleteBtn = taskElement.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', () => deleteTask(task.id));
+                
+                // Agregar evento para cambiar estado al hacer clic en la tarea
+                taskElement.addEventListener('click', (e) => {
+                    if (e.target !== deleteBtn) {
+                        changeTaskStatus(task.id);
+                    }
+                });
+                
+                tasksContainerElement.appendChild(taskElement);
+            }
+            
+            function deleteTask(taskId) {
+                let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                tasks = tasks.filter(task => task.id !== taskId);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                
+                loadTasksForDate(selectedDate);
+            }
+            
+            function changeTaskStatus(taskId) {
+                let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                const taskIndex = tasks.findIndex(task => task.id === taskId);
+                
+                if (taskIndex !== -1) {
+                    // Rotar entre los estados
+                    const currentStatus = tasks[taskIndex].status;
+                    let newStatus;
+                    
+                    switch(currentStatus) {
+                        case 'pending':
+                            newStatus = 'in-progress';
+                            break;
+                        case 'in-progress':
+                            newStatus = 'completed';
+                            break;
+                        case 'completed':
+                            newStatus = 'pending';
+                            break;
+                        default:
+                            newStatus = 'pending';
+                    }
+                    
+                    tasks[taskIndex].status = newStatus;
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                    loadTasksForDate(selectedDate);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
